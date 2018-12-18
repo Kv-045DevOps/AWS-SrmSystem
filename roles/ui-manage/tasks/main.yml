@@ -1,0 +1,38 @@
+---
+- name: Copy Files to host
+  become: yes
+  copy:
+    src: "{{ role_path }}/files/dockerui.service"
+    dest: /etc/systemd/system/
+- name: Install Docker
+  become: yes
+  command: amazon-linux-extras install docker -y
+
+- name: Add env POST_URL
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    regexp: "POST_URL={{hostvars['localhost'].post}}"
+    line: "POST_URL={{hostvars['localhost'].post}}"
+
+- name: Add env GET_URL
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    regexp: "GET_URL={{hostvars['localhost'].getservice}}"
+    line: "GET_URL={{hostvars['localhost'].getservice}}"
+
+- name: Set env var
+  shell: source /etc/environment
+
+- name: Start docker service
+  become: yes
+  service:
+    name=docker
+    state=started
+
+- name: Start ui service
+  become: yes
+  service:
+    name=dockerui.service
+    state=started

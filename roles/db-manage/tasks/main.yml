@@ -1,0 +1,62 @@
+---
+- name: Copy Files to host
+  become: yes
+  copy:
+    src: "{{ role_path }}/files/dockerdb.service"
+    dest: /etc/systemd/system/
+
+- name: Copy Database dump
+  become: yes
+  copy:
+    src: "{{ role_path }}/files/my_dump"
+    dest: /rds_dump/dump/
+
+- name: Add env PGPASSWORD
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    regexp: "^PGPASSWORD=Slider256$"
+    line: "PGPASSWORD=Slider256$"
+
+- name: Add env RDS_IP
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    regexp: "RDS_IP={{hostvars['localhost'].rds}}"
+    line: "RDS_IP={{hostvars['localhost'].rds}}"
+
+
+- name: Set env PGPASSWORD
+  shell: source /etc/environment
+
+
+- name: Install Docker
+  become: yes
+  command: amazon-linux-extras install docker -y
+
+
+- name: Install postgresql client
+  become: yes
+  shell:
+    yum install postgresql postgresql-server postgresql-devel postgresql-contrib postgresql-docs -y
+
+- name: Restore dump to RDS
+  become: yes
+  shell:
+    cat /rds_dump/dump/my_dump | psql -h "{{hostvars['localhost'].rds}}" -U root micro
+
+
+- name: Set env RDS_IP
+  shell: source /etc/environment
+
+- name: Start docker service
+  become: yes
+  service:
+    name=docker
+    state=started
+
+- name: Start db service
+  become: yes
+  service:
+    name=dockerdb.service
+    state=started

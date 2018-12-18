@@ -1,0 +1,15 @@
+[Unit]
+Description=UI Service Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=-/usr/bin/docker stop ui
+ExecStartPre=-/usr/bin/docker rm ui
+ExecStartPre=/usr/bin/docker pull akubrachenko/ui-service
+ExecStart=/usr/bin/docker run --env-file=/etc/environment --name ui -p 5000:5000 akubrachenko/ui-service:latest
+
+[Install]
+WantedBy=multi-user.target

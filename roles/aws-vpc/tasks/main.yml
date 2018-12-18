@@ -1,0 +1,184 @@
+---
+- name: create VPC
+  ec2_vpc_net:
+    name: "{{ vpc_name }}"
+    cidr_block: "{{ vpc_cidr }}"
+    region: "{{ region }}"
+    tags: "{{ resource_tags }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+  register: vpc
+
+- name: Create first subnet [private]
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    cidr: "{{ subnet_cidr }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    map_public: yes
+    az: sa-east-1c
+    tags: "{{ resource_tags }}"
+  register: subnet
+
+- name: Create first subnet [public]
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    cidr: "172.0.0.0/24"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    map_public: yes
+    az: sa-east-1c
+    tags: "{{ resource_tags }}"
+  register: subnet2
+
+- name: Create new nat gateway.
+  ec2_vpc_nat_gateway:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: present
+    subnet_id: "{{subnet2.subnet.id}}"
+    region: "{{region}}"
+  register: new_nat_gateway
+
+- name: create subnet for RDS
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    cidr: "{{ subnet_cidr_rds }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    map_public: yes
+    az: sa-east-1b
+    tags: "{{ resource_tags }}"
+  register: subnet_rds
+
+- name: create IGW
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: "present"
+    tags: "{{ resource_tags }}"
+  register: igw
+
+- name: Get id of default route table
+  ec2_vpc_route_table_facts:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ region }}"
+    filters:
+      vpc_id: "{{ vpc.vpc.id }}"
+      association.main: "true"
+  register: aws_main_rt
+
+- name: Configure main routing table for public subnet
+  ec2_vpc_route_table:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    vpc_id: "{{ vpc.vpc.id }}"
+    route_table_id: "{{ aws_main_rt.route_tables[0].id }}"
+    region: "{{ region }}"
+    tags: "{{ resource_tags }}"
+    purge_routes: "no"
+    lookup: id
+    subnets:
+      - "{{ subnet2.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        "gateway_id": "{{ igw.gateway_id }}"
+
+- name: Route private subnet
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    subnets:
+      - "{{ subnet.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        "gateway_id": "{{ new_nat_gateway.nat_gateway_id }}"
+    tags:
+      Name: "Private subnet(2) routes"
+      ita_group: Kv-045
+
+- name: Create Security Group
+  ec2_group:
+    name: SRMSystem
+    description: SRMSystem Security Group
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    tags: "{{ resource_tags }}"
+    state: present
+    rules:
+      - proto: tcp
+        from_port: 5000
+        to_port: 5003
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        ports:
+        - 22
+        cidr_ip: 0.0.0.0/0
+  register: security_group
+
+#Security Group for RDS
+- name: Create new security group for RDS
+  ec2_group:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    name: RDS
+    description: Security group for RDS
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    tags:
+      ita_group: Kv-045
+    rules:
+      - proto: tcp
+        from_port: 5432
+        to_port: 5432
+        cidr_ip: 0.0.0.0/0
+  register: new_group_rds
+
+#Subnet group for RDS
+- name: Subnet group for RDS
+  rds_subnet_group:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ region }}"
+    state: present
+    name: DB_Subnet
+    description: Subnet Group for RDS
+    subnets:
+      - "{{ subnet.subnet.id }}"
+      - "{{ subnet_rds.subnet.id }}"
+  register: new_subnet_group
+
+#Create RDS
+- name: create new RDS service with postgres
+  rds_instance:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    engine: postgres
+    db_instance_identifier: project-db-2
+    instance_type: db.t2.micro
+    multi_az: no
+    storage_type: standard
+    allocated_storage: 20
+    master_username: root
+    master_user_password: Slider256$
+    db_subnet_group_name: db_subnet
+    db_name: micro
+    storage_type: standard
+    vpc_security_group_ids: "{{ new_group_rds.group_id }}"
+    tags:
+      ita_group: Kv-045
+    region: "{{ region }}"
+  register: new_rds

@@ -1,0 +1,6 @@
+Host {{ proxy_ip }}
+  IdentityFile {{ ssh_key_path }}
+  User ec2-user
+
+Host 172.0.*.*
+  ProxyCommand ssh -W %h:%p {{ proxy_ip }}

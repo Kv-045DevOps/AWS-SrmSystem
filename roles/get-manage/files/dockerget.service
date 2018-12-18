@@ -1,0 +1,14 @@
+[Unit]
+Description=Get Service
+After=docker.service
+Requires=docker.service
+[Service]
+Type=simple
+TimeoutStartSec=0
+Restart=on-failure
+User=root
+ExecStartPre=-/usr/bin/docker rm --force get
+ExecStartPre=-/usr/bin/docker pull ghostgoose33/get-python:v2
+ExecStart=-/usr/bin/docker run --env-file=/etc/environment -p 5003:5003 --name get ghostgoose33/get-python:v2
+[Install]
+WantedBy=multi-user.target

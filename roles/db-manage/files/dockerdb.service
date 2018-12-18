@@ -1,0 +1,14 @@
+[Unit]
+Description=Post Service Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=-/usr/bin/docker stop db
+ExecStartPre=-/usr/bin/docker rm db
+ExecStartPre=/usr/bin/docker pull akubrachenko/db-service
+ExecStart=/usr/bin/docker run --env-file=/etc/environment --name db -p 5002:5000 akubrachenko/db-service:latest
+[Install]
+WantedBy=multi-user.target

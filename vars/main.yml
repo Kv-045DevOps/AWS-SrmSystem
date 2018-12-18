@@ -1,0 +1,16 @@
+---
+# AWS settings
+aws_access_key: "{{ lookup('env','aws_access_key') }}"
+aws_secret_key: "{{ lookup('env','asw_secret_key') }}"
+region: sa-east-1
+resource_tags:
+  ita_group: Kv-045
+ 
+# VPC
+vpc_cidr: 172.0.0.0/16
+vpc_name: SRMSystem
+ 
+# Subnet
+subnet_name: SRMSystem Subnet
+subnet_cidr: 172.0.1.0/24
+subnet_cidr_rds: 172.0.2.0/24

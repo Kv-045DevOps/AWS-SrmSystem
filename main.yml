@@ -1,0 +1,52 @@
+---
+- name: Deploy project
+  hosts: localhost
+  gather_facts: False
+  vars_files:
+    - vars/main.yml
+  roles:
+    - aws-vpc
+    - bastion
+    - db-service
+    - post-service
+    - get-service
+    - ui-service
+  tasks:
+    - name: Add post var 
+      set_fact:
+        rds: "{{new_rds.endpoint.address}}"
+        db: "{{ec2db.instances[0].private_ip_address}}"
+        getservice: "{{ec2get.instances[0].private_ip_address}}" 
+        post: "{{ec2post.instances[0].private_ip_address}}"
+
+- name: Manage db server
+  hosts: ec2db
+  gather_facts: False
+  vars_files:
+    - vars/main.yml
+  roles:
+    - db-manage
+
+- name: Manage post server
+  hosts: ec2hosts
+  gather_facts: False
+  vars_files:
+    - vars/main.yml
+  roles:
+    - post-manage
+
+- name: Manage get server
+  hosts: ec2get
+  gather_facts: False
+  vars_files:
+    - vars/main.yml
+  roles:
+    - get-manage
+
+- name: Manage ui server
+  hosts: ec2ui
+  gather_facts: False
+  vars_files:
+    - vars/main.yml
+  roles:
+    - ui-manage

@@ -1,0 +1,32 @@
+---
+
+- name: Copy Files to host
+  become: yes
+  copy:
+    src: "{{ role_path }}/files/dockerget.service"
+    dest: /etc/systemd/system/
+- name: Install Docker
+  become: yes
+  command: amazon-linux-extras install docker -y
+
+- name: Add env DB_URL
+  become: yes
+  lineinfile:
+    path: /etc/environment
+    regexp: "URL_DB=http://{{ hostvars['localhost'].db}}:5002/"
+    line: "URL_DB=http://{{ hostvars['localhost'].db}}:5002/"
+
+- name: Set env DB_URL
+  shell: source /etc/environment
+
+- name: Start docker service
+  become: yes
+  service:
+    name=docker
+    state=started
+
+- name: Start get service
+  become: yes
+  service:
+    name=dockerget.service
+    state=started    

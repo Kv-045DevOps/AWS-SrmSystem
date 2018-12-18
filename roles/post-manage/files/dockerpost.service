@@ -1,0 +1,15 @@
+[Unit]
+Description=Post Service Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+ExecStartPre=-/usr/bin/docker stop post
+ExecStartPre=-/usr/bin/docker rm post
+ExecStartPre=/usr/bin/docker pull akubrachenko/post-service
+ExecStart=/usr/bin/docker run --env-file=/etc/environment --name post -p 5001:5000 akubrachenko/post-service:latest
+
+[Install]
+WantedBy=multi-user.target
