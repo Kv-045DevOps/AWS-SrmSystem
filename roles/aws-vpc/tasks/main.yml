@@ -147,6 +147,24 @@
         cidr_ip: 0.0.0.0/0
   register: new_group_rds
 
+#Security Group for LB
+- name: Create new security group for LB
+  ec2_group:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    name: SGLB
+    description: Security group for LB
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    tags:
+      ita_group: Kv-045
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+  register: lb_sgroup
+
 #Subnet group for RDS
 - name: Subnet group for RDS
   rds_subnet_group:

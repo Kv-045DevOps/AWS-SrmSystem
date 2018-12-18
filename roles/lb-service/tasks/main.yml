@@ -1,0 +1,39 @@
+# Create a target group with instance targets
+- name: Create target group for lb
+  elb_target_group:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    name: lbtargetgroup
+    protocol: http
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{region}}"
+    port: 5000
+    tags: "{{ resource_tags }}"
+    health_check_path: /
+    targets:
+      - Id: "{{ec2_ui.instances[0].instance_id}}"
+        Port: 5000
+    state: present
+  register: lbtargetg
+
+# Create Load Balancer
+- name: Create LB
+  elb_application_lb:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    name: srmsystemlb
+    region: "{{region}}"
+    tags: "{{ resource_tags }}"
+    security_groups:
+      - "{{ security_group.group_id }}"
+      - "{{ lb_sgroup.group_id }}"
+    subnets:
+      - "{{ subnet.subnet.id }}"
+      - "{{ subnet_rds.subnet.id }}"
+    listeners:
+      - Protocol: HTTP
+        Port: 80
+        DefaultActions:
+          - Type: forward
+            TargetGroupName: "{{lbtargetg.target_group_name}}"
+    state: present

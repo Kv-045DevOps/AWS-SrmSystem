@@ -11,6 +11,7 @@
     - post-service
     - get-service
     - ui-service
+    - lb-service
   tasks:
     - name: Add post var 
       set_fact:
