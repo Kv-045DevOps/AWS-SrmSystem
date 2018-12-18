@@ -38,8 +38,8 @@ SET default_with_oids = false;
 --
 
 CREATE TABLE department (
-    id integer NOT NULL,
-    name character varying(45) NOT NULL
+    id smallint NOT NULL,
+    name character varying(20)
 );
 
 
@@ -71,7 +71,7 @@ ALTER SEQUENCE department_id_seq OWNED BY department.id;
 --
 
 CREATE TABLE employee (
-    id integer NOT NULL,
+    id smallint NOT NULL,
     fname character varying(45) NOT NULL,
     sname character varying(45) NOT NULL,
     exp integer NOT NULL,
@@ -110,7 +110,7 @@ ALTER SEQUENCE employee_id_seq OWNED BY employee.id;
 --
 
 CREATE TABLE team (
-    id integer NOT NULL,
+    id smallint NOT NULL,
     name character varying(45) NOT NULL,
     id_manager integer,
     id_department integer
