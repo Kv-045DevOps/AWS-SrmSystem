@@ -22,6 +22,8 @@
     tags: "{{ resource_tags }}"
     key_name: "{{ key_for_db.key.name }}"
     state: present
+    network:
+      assign_public_ip: false
   register: ec2db
 
 - name: add host db server to group 'ec2hosts'
