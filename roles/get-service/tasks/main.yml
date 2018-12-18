@@ -22,6 +22,8 @@
     tags: "{{ resource_tags }}"
     key_name: "{{ key_for_get.key.name }}"
     state: present
+    network:
+      assign_public_ip: false
   register: ec2get
 
 - name: add host get server to group 'ec2hosts'

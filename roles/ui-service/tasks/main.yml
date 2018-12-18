@@ -22,6 +22,8 @@
     tags: "{{ resource_tags }}"
     key_name: "{{ key_for_ui.key.name }}"
     state: present
+    network:
+      assign_public_ip: false
   register: ec2_ui
 
 - name: add host ui server to group 'ec2hosts'
